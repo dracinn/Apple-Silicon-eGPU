@@ -9,6 +9,8 @@
 - [ ] Define minimum kernel/configuration requirements
 - [ ] Reproduce the known Apple PCIe/tunnel recovery path before GPU testing
 
+> Upstream note (2026-11-09): Aurora now tunnels PCIe over USB4 on the M4/T8132 ([aurora-silicon/linux#846](https://github.com/aurora-silicon/linux/pull/846)), but says PCIe tunnelling is not offered on M1/M2 ports: m1n1 does not bring up the PCIe-C controller and the kernel does not cold-init it there ([#1015](https://github.com/aurora-silicon/linux/pull/1015)). Treat T8103 PCIe-C cold init as an open Phase 0/1 dependency. Use the T8132 path as the reference implementation. See RESEARCH.md.
+
 ## Phase 1 — PCIe transport and resources
 
 - [ ] Detect and initialize Apple USB4/Thunderbolt infrastructure
@@ -22,6 +24,8 @@
 - [ ] Verify PCIe AER reporting and recovery
 
 **Gate:** a generic PCIe endpoint must remain usable through enumeration, resource assignment, interrupt delivery and link recovery before attaching a GPU.
+
+> Upstream note (2026-11-09): the T8132 tunnel DART bypasses only the MSI streams (`apple,bypass-sids`) and gives devices behind USB4 translated DMA domains ([#846](https://github.com/aurora-silicon/linux/pull/846)). MSI/MSI-X and DART validation should use that configuration, not identity mapping.
 
 ## Phase 2 — DART, DMA and device lifecycle
 
@@ -38,6 +42,8 @@
 
 **Gate:** a generic endpoint must complete DMA and reset/recovery tests without silent corruption or IOMMU faults.
 
+> Upstream note (2026-11-09): the PCIe-C to NHI sleep ordering now exists as a device link ([aurora-silicon/linux#1251](https://github.com/aurora-silicon/linux/pull/1251)). The suspend/resume ordering test should check that it is present on the target board.
+
 ## Phase 3 — AMD eGPU
 
 - [ ] Enumerate a supported AMD GPU
@@ -46,6 +52,7 @@
 - [ ] Validate external/removable-device classification
 - [ ] Validate VBIOS discovery path for an external GPU
 - [ ] Validate VRAM/GART and DMA
+  - Upstream note (2026-11-09): an NVIDIA GPU behind the Apple tunnel root port (`106b:100f`, M1 Max) reset the machine with WC BAR mappings and worked with them disabled (n=1; [NVIDIA/open-gpu-kernel-modules#1482](https://github.com/NVIDIA/open-gpu-kernel-modules/pull/1482)). Check how amdgpu maps the VRAM BAR (WC vs. device) through the tunnel, and check 16K-page/2M IOVA alignment assumptions.
 - [ ] Validate command submission
 - [ ] Validate GPU reset/error recovery
 - [ ] Validate Mesa Vulkan
